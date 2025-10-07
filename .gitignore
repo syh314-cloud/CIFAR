@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.DS_Store
+data/
+datasets/
+checkpoints/
+models/
+logs/
+*.npy
+*.pkl
+*.bin
+*.pt
+*.zip
+*.tar
+*.gz
+*.ckpt
+

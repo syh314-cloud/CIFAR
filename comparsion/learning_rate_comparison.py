@@ -90,7 +90,7 @@ class LearningRateExperiment:
             val_pred = model.forward(val_images, training=False)
             val_acc = np.mean(np.argmax(val_pred, axis=1) == np.argmax(val_labels, axis=1))
             
-            avg_loss = np.mean(epoch_losses)
+            avg_loss = np.mean(np.array(epoch_losses))
             train_losses.append(avg_loss)
             val_accuracies.append(val_acc)
             

@@ -27,6 +27,8 @@ class LabelSmoothingLoss:
         self.alpha = alpha
 
     def forward(self,y_pred,y_true, model=None, lambda_l2=1e-4):
+        self.y_pred = y_pred
+        self.y_true = y_true
         K = y_true.shape[1]
         smooth_labels = (1-self.alpha)*y_true + self.alpha/K
         eps = 1e-7

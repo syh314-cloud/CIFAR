@@ -90,6 +90,9 @@ class LossFunctionExperiment:
         loss_fn = loss_config['class'](**loss_config['params'])
         optimizer = Adam(self.learning_rate, beta1=0.9, beta2=0.999)
         
+        # 固定L2正则化系数
+        lambda_l2 = 1e-4
+        
         step_losses = []  # 记录每个step的loss
         val_accuracies = []
         steps_per_epoch = len(range(0, train_images.shape[0], self.batch_size))
@@ -123,7 +126,7 @@ class LossFunctionExperiment:
                 model.zero_grad()
                 y_pred = model.forward(x, training=True)
           
-                loss = loss_fn.forward(y_pred, y)
+                loss = loss_fn.forward(y_pred, y, model, lambda_l2=lambda_l2)
                 step_losses.append(loss)  # 记录每个step的loss
                 epoch_losses.append(loss)
                 
@@ -134,6 +137,12 @@ class LossFunctionExperiment:
                     grad_output = loss_fn.backward()
                 
                 model.backward(grad_output)
+                
+                # 添加L2正则化梯度
+                for layer in model.layers:
+                    if hasattr(layer, 'w'):
+                        layer.dw += lambda_l2 * layer.w
+                
                 optimizer.step(model)
             
             val_pred = model.forward(val_images, training=False)

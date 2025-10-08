@@ -251,11 +251,11 @@ class NetworkDepthExperiment:
         fig, axes = plt.subplots(2, 2, figsize=(16, 12))
         fig.suptitle('Network Depth Comparison Results (Hidden Dim=512)', fontsize=18, fontweight='bold', y=0.98)
         
-        # 定义颜色方案
+        # 定义颜色方案 - 使用更易区分的颜色
         colors = {
-            '2-Layer': '#FF6B6B',
-            '4-Layer': '#4ECDC4',
-            '6-Layer': '#45B7D1'
+            '2-Layer': '#FF6B6B',    # 红色
+            '4-Layer': '#4ECDC4',    # 青色
+            '6-Layer': '#9B59B6'     # 紫色
         }
         
         # 1. 训练Loss曲线 (按step)

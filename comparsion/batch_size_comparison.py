@@ -42,7 +42,7 @@ class BatchSizeExperiment:
         self.learning_rate = 7e-05
         
         # 要测试的batch size
-        self.batch_sizes = [16, 32, 64, 128, 256, 512]
+        self.batch_sizes = [16, 32, 64, 128, 256]
         
         self.results = {}
         

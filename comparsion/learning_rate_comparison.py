@@ -32,7 +32,7 @@ class LearningRateExperiment:
         self.SEED = 2023
         np.random.seed(self.SEED)
         
-        self.learning_rates = [3e-5, 5e-5, 7e-5, 1e-4, 2e-4, 3e-4]
+        self.learning_rates = [1e-5, 3e-5, 5e-5, 7e-5, 1e-4]
         
         self.results = {}
         

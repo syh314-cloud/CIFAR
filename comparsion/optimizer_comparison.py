@@ -44,7 +44,7 @@ class OptimizerExperiment:
         
         # 要测试的优化器配置
         self.optimizers_config = {
-            'SGD': {'class': SGD, 'params': {'lr': self.learning_rate}},
+            'SGD': {'class': SGD, 'params': {}},  # SGD不需要初始化参数
             'Momentum': {'class': Momentum, 'params': {'lr': self.learning_rate, 'momentum': 0.9}},
             'Adam': {'class': Adam, 'params': {'lr': self.learning_rate, 'beta1': 0.9, 'beta2': 0.999}},
             'Adagrad': {'class': Adagrad, 'params': {'lr': self.learning_rate, 'epsilon': 1e-8}},

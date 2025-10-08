@@ -7,14 +7,19 @@ try:
 except ImportError:
     import numpy as np
     np_cpu = np
-import matplotlib.pyplot as plt
 import matplotlib
+matplotlib.use('Agg')  # 设置后端，避免GUI问题
+import matplotlib.pyplot as plt
 import json
 import os
 from datetime import datetime
 
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
-matplotlib.rcParams['axes.unicode_minus'] = False
+# 设置中文字体和显示参数
+plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False
+plt.rcParams['figure.dpi'] = 100
+plt.rcParams['savefig.dpi'] = 300
+plt.rcParams['font.size'] = 10
 
 from utils.data_loader import train_images, train_labels, val_images, val_labels, test_images, test_labels
 from model.mlp_4layer import MLP
@@ -53,8 +58,9 @@ class LearningRateExperiment:
         
         lambda_l2 = l2_scheduler.base_lambda
         
-        train_losses = []
+        step_losses = []  # 记录每个step的loss
         val_accuracies = []
+        steps_per_epoch = len(range(0, train_images.shape[0], self.batch_size))
         
         for epoch in range(self.epochs):
             if epoch < 20:
@@ -85,6 +91,7 @@ class LearningRateExperiment:
                 y_pred = model.forward(x, training=True)
           
                 loss = loss_fn.forward(y_pred, y, model, lambda_l2=lambda_l2)
+                step_losses.append(loss)  # 记录每个step的loss
                 epoch_losses.append(loss)
                 
                 grad_output = loss_fn.backward()
@@ -98,10 +105,9 @@ class LearningRateExperiment:
             
             val_pred = model.forward(val_images, training=False)
             val_acc = np.mean(np.argmax(val_pred, axis=1) == np.argmax(val_labels, axis=1))
+            val_accuracies.append(val_acc)
             
             avg_loss = np.mean(np.array(epoch_losses))
-            train_losses.append(avg_loss)
-            val_accuracies.append(val_acc)
             
             if (epoch + 1) % 10 == 0:
                 print(f"  Epoch {epoch+1:2d}/{self.epochs} - Loss: {avg_loss:.4f}, Val Acc: {val_acc:.4f}")
@@ -111,10 +117,11 @@ class LearningRateExperiment:
         
         
         return {
-            'train_losses': train_losses,
+            'step_losses': step_losses,  # 每个step的loss
             'val_accuracies': val_accuracies,
             'test_accuracy': test_acc,
-            'learning_rate': lr
+            'learning_rate': lr,
+            'steps_per_epoch': steps_per_epoch
         }
     
     def run_experiments(self):
@@ -140,14 +147,15 @@ class LearningRateExperiment:
         # 转换numpy数组为列表以便JSON序列化
         results_to_save = {}
         for lr, result in self.results.items():
-            train_losses = [float(x.get() if hasattr(x, 'get') else x) for x in result['train_losses']]
+            step_losses = [float(x.get() if hasattr(x, 'get') else x) for x in result['step_losses']]
             val_accuracies = [float(x.get() if hasattr(x, 'get') else x) for x in result['val_accuracies']]
             test_accuracy = float(result['test_accuracy'].get() if hasattr(result['test_accuracy'], 'get') else result['test_accuracy'])
             results_to_save[str(lr)] = {
-                'train_losses': train_losses,
+                'step_losses': step_losses,
                 'val_accuracies': val_accuracies,
                 'test_accuracy': test_accuracy,
-                'learning_rate': float(result['learning_rate'])
+                'learning_rate': float(result['learning_rate']),
+                'steps_per_epoch': result['steps_per_epoch']
             }
         
         with open(filename, 'w', encoding='utf-8') as f:
@@ -160,30 +168,38 @@ class LearningRateExperiment:
         print(f"\n📊 生成可视化图表...")
         
         # 创建图表
-        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-        fig.suptitle('学习率对比实验结果', fontsize=16, fontweight='bold')
+        plt.close('all')  # 关闭之前的图表
+        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+        fig.suptitle('Learning Rate Comparison Results', fontsize=18, fontweight='bold', y=0.98)
         
-        # 1. 训练Loss曲线
+        # 1. 训练Loss曲线 (按step)
         ax1 = axes[0, 0]
         for lr, result in self.results.items():
-            train_losses_np = self._to_numpy(result['train_losses'])
-            ax1.plot(train_losses_np, label=f'LR={lr}', linewidth=2)
-        ax1.set_title('训练集 Loss 曲线', fontsize=14, fontweight='bold')
-        ax1.set_xlabel('Epoch')
-        ax1.set_ylabel('Loss')
-        ax1.legend()
+            step_losses_np = self._to_numpy(result['step_losses'])
+            steps = range(len(step_losses_np))
+            # 每隔一定步数采样，避免图表过于密集
+            sample_interval = max(1, len(step_losses_np) // 1000)  # 最多显示1000个点
+            sampled_steps = steps[::sample_interval]
+            sampled_losses = step_losses_np[::sample_interval]
+            ax1.plot(sampled_steps, sampled_losses, label=f'LR={lr}', linewidth=1.5, alpha=0.8)
+        ax1.set_title('Training Loss Curves (by Steps)', fontsize=14, fontweight='bold', pad=15)
+        ax1.set_xlabel('Training Steps', fontsize=12)
+        ax1.set_ylabel('Loss', fontsize=12)
+        ax1.legend(fontsize=10, loc='upper right')
         ax1.grid(True, alpha=0.3)
+        ax1.tick_params(axis='both', which='major', labelsize=10)
         
         # 2. 验证Accuracy曲线
         ax2 = axes[0, 1]
         for lr, result in self.results.items():
             val_accuracies_np = self._to_numpy(result['val_accuracies'])
-            ax2.plot(val_accuracies_np, label=f'LR={lr}', linewidth=2)
-        ax2.set_title('验证集 Accuracy 曲线', fontsize=14, fontweight='bold')
-        ax2.set_xlabel('Epoch')
-        ax2.set_ylabel('Accuracy')
-        ax2.legend()
+            ax2.plot(val_accuracies_np, label=f'LR={lr}', linewidth=2, marker='s', markersize=3)
+        ax2.set_title('Validation Accuracy Curves', fontsize=14, fontweight='bold', pad=15)
+        ax2.set_xlabel('Epoch', fontsize=12)
+        ax2.set_ylabel('Accuracy', fontsize=12)
+        ax2.legend(fontsize=10, loc='lower right')
         ax2.grid(True, alpha=0.3)
+        ax2.tick_params(axis='both', which='major', labelsize=10)
         
         # 3. 测试准确率柱状图
         ax3 = axes[1, 0]
@@ -191,13 +207,15 @@ class LearningRateExperiment:
         test_accs = [self._to_numpy(self.results[lr]['test_accuracy']) for lr in lrs]
         
         bars = ax3.bar(range(len(lrs)), test_accs, 
-                      color=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'])
-        ax3.set_title('测试集最终准确率对比', fontsize=14, fontweight='bold')
-        ax3.set_xlabel('学习率')
-        ax3.set_ylabel('测试准确率')
+                      color=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'],
+                      alpha=0.8, edgecolor='black', linewidth=1)
+        ax3.set_title('Final Test Accuracy Comparison', fontsize=14, fontweight='bold', pad=15)
+        ax3.set_xlabel('Learning Rate', fontsize=12)
+        ax3.set_ylabel('Test Accuracy', fontsize=12)
         ax3.set_xticks(range(len(lrs)))
-        ax3.set_xticklabels([f'{lr}' for lr in lrs], rotation=45)
+        ax3.set_xticklabels([f'{lr}' for lr in lrs], rotation=45, fontsize=10)
         ax3.grid(True, alpha=0.3, axis='y')
+        ax3.tick_params(axis='both', which='major', labelsize=10)
         
         # 在柱状图上添加数值标签
         for i, (bar, acc) in enumerate(zip(bars, test_accs)):
@@ -215,7 +233,7 @@ class LearningRateExperiment:
         
         for lr in lrs:
             result = self.results[lr]
-            final_loss = self._to_numpy(result['train_losses'][-1])
+            final_loss = self._to_numpy(result['step_losses'][-1])  # 最后一个step的loss
             best_val_acc = max(self._to_numpy(result['val_accuracies']))
             test_acc = self._to_numpy(result['test_accuracy'])
             
@@ -239,14 +257,24 @@ class LearningRateExperiment:
             table[(0, i)].set_facecolor('#4ECDC4')
             table[(0, i)].set_text_props(weight='bold', color='white')
         
-        ax4.set_title('性能对比总结', fontsize=14, fontweight='bold', pad=20)
+        ax4.set_title('Performance Summary', fontsize=14, fontweight='bold', pad=20)
         
-        plt.tight_layout()
+        # 调整布局
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # 为suptitle留出空间
         
         # 保存图表
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        plt.savefig(f'lr_comparison_plots_{timestamp}.png', dpi=300, bbox_inches='tight')
-        plt.show()
+        filename = f'lr_comparison_plots_{timestamp}.png'
+        plt.savefig(filename, dpi=300, bbox_inches='tight', 
+                   facecolor='white', edgecolor='none')
+        
+        print(f"📈 图表已保存到: {filename}")
+        
+        # 尝试显示图表（如果有GUI环境）
+        try:
+            plt.show()
+        except:
+            print("📱 无GUI环境，图表已保存为文件")
         
         print(f"📈 图表已保存并显示")
         

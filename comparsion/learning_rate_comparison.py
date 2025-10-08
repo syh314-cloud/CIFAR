@@ -178,13 +178,14 @@ class LearningRateExperiment:
             step_losses_np = self._to_numpy(result['step_losses'])
             steps = range(len(step_losses_np))
             # 每隔一定步数采样，避免图表过于密集
-            sample_interval = max(1, len(step_losses_np) // 1000)  # 最多显示1000个点
+            sample_interval = 500  # 固定采样间隔为500步
             sampled_steps = steps[::sample_interval]
             sampled_losses = step_losses_np[::sample_interval]
             ax1.plot(sampled_steps, sampled_losses, label=f'LR={lr}', linewidth=1.5, alpha=0.8)
-        ax1.set_title('Training Loss Curves (by Steps)', fontsize=14, fontweight='bold', pad=15)
+        ax1.set_title('Training Loss Curves (Sampled every 500 steps)', fontsize=14, fontweight='bold', pad=15)
         ax1.set_xlabel('Training Steps', fontsize=12)
         ax1.set_ylabel('Loss', fontsize=12)
+        ax1.set_xlim(left=0)  # 确保X轴从0开始
         ax1.legend(fontsize=10, loc='upper right')
         ax1.grid(True, alpha=0.3)
         ax1.tick_params(axis='both', which='major', labelsize=10)
@@ -220,7 +221,7 @@ class LearningRateExperiment:
         # 在柱状图上添加数值标签
         for i, (bar, acc) in enumerate(zip(bars, test_accs)):
             ax3.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.005,
-                    f'{acc:.3f}', ha='center', va='bottom', fontweight='bold')
+                    f'{acc:.4f}', ha='center', va='bottom', fontweight='bold')
         
         # 4. 最终收敛性能对比表格
         ax4 = axes[1, 1]

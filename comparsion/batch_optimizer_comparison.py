@@ -30,7 +30,7 @@ plt.rcParams['font.size'] = 10
 from utils.data_loader import train_images, train_labels, val_images, val_labels, test_images, test_labels
 from model.mlp_4layer import MLP
 from utils.loss import CrossEntropyLoss, L2Scheduler
-from utils.batch_optimizers import BatchGD, OnlineGD, MiniBatchGD
+from utils.batch_optimizers import BatchGD, OnlineGD, MiniBatchGD, AdaptiveBatchGD
 from utils.data_augmentation import augment_images
 
 class BatchOptimizerExperiment:
@@ -47,6 +47,7 @@ class BatchOptimizerExperiment:
             'BatchGD': {'class': BatchGD, 'params': {'lr': self.learning_rate}},
             'OnlineGD': {'class': OnlineGD, 'params': {'lr': self.learning_rate}},
             'MiniBatchGD': {'class': MiniBatchGD, 'params': {'lr': self.learning_rate}},
+            'AdaptiveBatchGD': {'class': AdaptiveBatchGD, 'params': {'lr': self.learning_rate}},
         }
         
         self.results = {}
@@ -86,7 +87,7 @@ class BatchOptimizerExperiment:
             actual_batch_size = 1  # Online GD每次只用一个样本
         elif optimizer_name == 'BatchGD':
             actual_batch_size = train_images.shape[0]  # Batch GD使用全部数据
-        else:  # MiniBatchGD
+        else:  # MiniBatchGD 和 AdaptiveBatchGD
             actual_batch_size = self.batch_size
         
         steps_per_epoch = len(range(0, train_images.shape[0], actual_batch_size))
@@ -227,7 +228,8 @@ class BatchOptimizerExperiment:
         colors = {
             'BatchGD': '#FF6B6B',
             'OnlineGD': '#4ECDC4',
-            'MiniBatchGD': '#45B7D1'
+            'MiniBatchGD': '#45B7D1',
+            'AdaptiveBatchGD': '#96CEB4'
         }
         
         # 1. 训练Loss曲线 (按step)

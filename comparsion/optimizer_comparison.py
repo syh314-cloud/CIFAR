@@ -218,13 +218,10 @@ class OptimizerExperiment:
         for opt_name, result in self.results.items():
             step_losses_np = self._to_numpy(result['step_losses'])
             steps = range(len(step_losses_np))
-            # 每隔一定步数采样，避免图表过于密集
-            sample_interval = 100  # 固定采样间隔为100步
-            sampled_steps = steps[::sample_interval]
-            sampled_losses = step_losses_np[::sample_interval]
-            ax1.plot(sampled_steps, sampled_losses, label=opt_name, 
+            # 每步都采样，不做间隔
+            ax1.plot(steps, step_losses_np, label=opt_name, 
                     color=colors.get(opt_name, 'gray'), linewidth=1.5, alpha=0.8)
-        ax1.set_title('Training Loss Curves (Sampled every 100 steps)', fontsize=14, fontweight='bold', pad=15)
+        ax1.set_title('Training Loss Curves ', fontsize=14, fontweight='bold', pad=15)
         ax1.set_xlabel('Training Steps', fontsize=12)
         ax1.set_ylabel('Loss', fontsize=12)
         ax1.set_xlim(left=0)  # 确保X轴从0开始

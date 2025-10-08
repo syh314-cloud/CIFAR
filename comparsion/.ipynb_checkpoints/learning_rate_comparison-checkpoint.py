@@ -27,21 +27,12 @@ class LearningRateExperiment:
         self.SEED = 2023
         np.random.seed(self.SEED)
         
-        self.learning_rates = [3e-5, 5e-5, 7e-5, 1e-4, 2e-4, 3e-4]
+        self.learning_rates = [0.00005, 0.0001, 0.0005, 0.001, 0.003, 0.01]
         
         self.results = {}
         
         self.batch_size = 64
-        self.epochs = 100
-    
-    def _to_numpy(self, data):
-        """将CuPy数组转换为NumPy数组用于matplotlib"""
-        if hasattr(data, 'get'):  # CuPy数组
-            return data.get()
-        elif isinstance(data, list):
-            return [self._to_numpy(item) for item in data]
-        else:
-            return data 
+        self.epochs = 100 
     
     def train_single_model(self, lr):
         np.random.seed(self.SEED)
@@ -99,7 +90,7 @@ class LearningRateExperiment:
             val_pred = model.forward(val_images, training=False)
             val_acc = np.mean(np.argmax(val_pred, axis=1) == np.argmax(val_labels, axis=1))
             
-            avg_loss = np.mean(np.array(epoch_losses))
+            avg_loss = np.mean(epoch_losses)
             train_losses.append(avg_loss)
             val_accuracies.append(val_acc)
             
@@ -166,8 +157,7 @@ class LearningRateExperiment:
         # 1. 训练Loss曲线
         ax1 = axes[0, 0]
         for lr, result in self.results.items():
-            train_losses_np = self._to_numpy(result['train_losses'])
-            ax1.plot(train_losses_np, label=f'LR={lr}', linewidth=2)
+            ax1.plot(result['train_losses'], label=f'LR={lr}', linewidth=2)
         ax1.set_title('训练集 Loss 曲线', fontsize=14, fontweight='bold')
         ax1.set_xlabel('Epoch')
         ax1.set_ylabel('Loss')
@@ -177,8 +167,7 @@ class LearningRateExperiment:
         # 2. 验证Accuracy曲线
         ax2 = axes[0, 1]
         for lr, result in self.results.items():
-            val_accuracies_np = self._to_numpy(result['val_accuracies'])
-            ax2.plot(val_accuracies_np, label=f'LR={lr}', linewidth=2)
+            ax2.plot(result['val_accuracies'], label=f'LR={lr}', linewidth=2)
         ax2.set_title('验证集 Accuracy 曲线', fontsize=14, fontweight='bold')
         ax2.set_xlabel('Epoch')
         ax2.set_ylabel('Accuracy')
@@ -188,7 +177,7 @@ class LearningRateExperiment:
         # 3. 测试准确率柱状图
         ax3 = axes[1, 0]
         lrs = list(self.results.keys())
-        test_accs = [self._to_numpy(self.results[lr]['test_accuracy']) for lr in lrs]
+        test_accs = [self.results[lr]['test_accuracy'] for lr in lrs]
         
         bars = ax3.bar(range(len(lrs)), test_accs, 
                       color=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'])
@@ -215,9 +204,9 @@ class LearningRateExperiment:
         
         for lr in lrs:
             result = self.results[lr]
-            final_loss = self._to_numpy(result['train_losses'][-1])
-            best_val_acc = max(self._to_numpy(result['val_accuracies']))
-            test_acc = self._to_numpy(result['test_accuracy'])
+            final_loss = result['train_losses'][-1]
+            best_val_acc = max(result['val_accuracies'])
+            test_acc = result['test_accuracy']
             
             table_data.append([
                 f'{lr}',
@@ -251,8 +240,8 @@ class LearningRateExperiment:
         print(f"📈 图表已保存并显示")
         
         # 打印最佳结果
-        best_lr = max(self.results.keys(), key=lambda lr: self._to_numpy(self.results[lr]['test_accuracy']))
-        best_acc = self._to_numpy(self.results[best_lr]['test_accuracy'])
+        best_lr = max(self.results.keys(), key=lambda lr: self.results[lr]['test_accuracy'])
+        best_acc = self.results[best_lr]['test_accuracy']
         print(f"\n🏆 最佳学习率: {best_lr} (测试准确率: {best_acc:.4f})")
 
 def main():

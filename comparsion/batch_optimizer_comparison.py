@@ -82,17 +82,22 @@ class BatchOptimizerExperiment:
         step_losses = []  # 记录每个step的loss
         val_accuracies = []
         
-        # 根据优化器类型确定实际的batch size
+        # 初始batch size
         if optimizer_name == 'OnlineGD':
-            actual_batch_size = 1  # Online GD每次只用一个样本
+            current_batch_size = 1  # Online GD每次只用一个样本
         elif optimizer_name == 'BatchGD':
-            actual_batch_size = train_images.shape[0]  # Batch GD使用全部数据
+            current_batch_size = train_images.shape[0]  # Batch GD使用全部数据
         else:  # MiniBatchGD 和 AdaptiveBatchGD
-            actual_batch_size = self.batch_size
+            current_batch_size = self.batch_size
         
-        steps_per_epoch = len(range(0, train_images.shape[0], actual_batch_size))
+        steps_per_epoch = 0  # 用于统计平均每epoch的步数
         
         for epoch in range(self.epochs):
+            # AdaptiveBatchGD: 在每个epoch开始时更新batch size
+            if optimizer_name == 'AdaptiveBatchGD' and epoch > 0:
+                current_batch_size = optimizer.get_adaptive_batch_size()
+                print(f"    Epoch {epoch}: Adaptive batch size = {current_batch_size}")
+            
             # 设置dropout策略
             if epoch < 20:
                 model.dropout1.p = 0.0
@@ -109,14 +114,16 @@ class BatchOptimizerExperiment:
             shuffled_labels = train_labels[idx]
             
             epoch_losses = []
+            epoch_steps = 0
             
             # BatchGD特殊处理：累积整个epoch的梯度
             if optimizer_name == 'BatchGD':
                 optimizer.reset()  # 重置累积的梯度
             
-            for i in range(0, shuffled_images.shape[0], actual_batch_size):
-                x = shuffled_images[i:i+actual_batch_size]
-                y = shuffled_labels[i:i+actual_batch_size]
+            for i in range(0, shuffled_images.shape[0], current_batch_size):
+                epoch_steps += 1
+                x = shuffled_images[i:i+current_batch_size]
+                y = shuffled_labels[i:i+current_batch_size]
                 
                 x = x.reshape(-1, 3, 32, 32)
                 x = augment_images(x, seed=self.SEED + epoch * 1000 + i)
@@ -146,6 +153,9 @@ class BatchOptimizerExperiment:
             if optimizer_name == 'BatchGD':
                 optimizer.step(model)
             
+            # 统计平均步数
+            steps_per_epoch += epoch_steps
+            
             val_pred = model.forward(val_images, training=False)
             val_acc = np.mean(np.argmax(val_pred, axis=1) == np.argmax(val_labels, axis=1))
             val_accuracies.append(val_acc)
@@ -160,13 +170,16 @@ class BatchOptimizerExperiment:
         
         print(f"✅ 训练完成 - 最终测试准确率: {test_acc:.4f}")
         
+        # 计算平均每epoch的步数
+        avg_steps_per_epoch = steps_per_epoch // self.epochs if self.epochs > 0 else 0
+        
         return {
             'step_losses': step_losses,  # 每个step的loss
             'val_accuracies': val_accuracies,
             'test_accuracy': test_acc,
             'optimizer_name': optimizer_name,
-            'steps_per_epoch': steps_per_epoch,
-            'actual_batch_size': actual_batch_size
+            'steps_per_epoch': avg_steps_per_epoch,
+            'actual_batch_size': current_batch_size if optimizer_name != 'AdaptiveBatchGD' else 'Adaptive'
         }
     
     def run_experiments(self):
@@ -224,12 +237,12 @@ class BatchOptimizerExperiment:
         fig, axes = plt.subplots(2, 2, figsize=(16, 12))
         fig.suptitle('Batch Optimizer Comparison Results', fontsize=18, fontweight='bold', y=0.98)
         
-        # 定义颜色方案
+        # 定义颜色方案 - 使用更易区分的颜色
         colors = {
-            'BatchGD': '#FF6B6B',
-            'OnlineGD': '#4ECDC4',
-            'MiniBatchGD': '#45B7D1',
-            'AdaptiveBatchGD': '#96CEB4'
+            'BatchGD': '#FF6B6B',        # 红色
+            'OnlineGD': '#4ECDC4',       # 青色
+            'MiniBatchGD': '#FFA500',    # 橙色
+            'AdaptiveBatchGD': '#9B59B6' # 紫色
         }
         
         # 1. 训练Loss曲线 (按step)

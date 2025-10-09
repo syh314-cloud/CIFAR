@@ -52,9 +52,21 @@ class FocalLoss:
         self.eps = 1e-7
     
     def forward(self,y_pred,y_true, model=None, lambda_l2=1e-4):
-        y_pred = np.clip(y_pred, self.eps, 1.0 - self.eps)
-        p_t = np.sum(y_true * y_pred,axis=1)
-        loss = -np.mean((1 - p_t)**self.gamma * np.log(p_t))
+        """
+        Focal Loss = -∑(1-p_t)^gamma * log(p_t)
+        p_t = p if y=1, else 1-p
+        """
+        self.y_pred = np.clip(y_pred, self.eps, 1.0 - self.eps)
+        self.y_true = y_true
+        
+        # 计算每个样本对应真实类别的预测概率
+        p_t = np.sum(y_true * self.y_pred, axis=1)  # [batch_size]
+        
+        # 计算focal loss
+        focal_weight = (1 - p_t) ** self.gamma
+        loss = -np.mean(focal_weight * np.log(p_t))
+        
+        # L2正则化
         if model is not None:
             l2_reg = 0
             for layer in model.layers:
@@ -63,12 +75,21 @@ class FocalLoss:
             loss += (lambda_l2 / (2 * y_true.shape[0])) * l2_reg
         return loss
     
-    def backward(self, y_pred, y_true):
-        y_pred = np.clip(y_pred, self.eps, 1.0 - self.eps)
-        p_t = np.sum(y_true * y_pred, axis=1, keepdims=True)
-        log_p_t = np.log(p_t)
-        grad = -y_true * ((1 - p_t) ** self.gamma * (1 + self.gamma * p_t * log_p_t)) / p_t
-        grad /= y_true.shape[0]
+    def backward(self):
+        """
+        Focal Loss的梯度
+        d(FL)/dy_pred = -alpha * y_true * (1-p_t)^(gamma-1) * (gamma*p_t*log(p_t) + p_t - 1) / p_t
+        """
+        # 计算每个样本对应真实类别的预测概率
+        p_t = np.sum(self.y_true * self.y_pred, axis=1, keepdims=True)  # [batch_size, 1]
+        
+        # 计算focal weight
+        focal_weight = (1 - p_t) ** (self.gamma - 1)
+        
+        # 计算梯度
+        grad = -self.y_true * focal_weight * (self.gamma * p_t * np.log(p_t) + p_t - 1) / (p_t + self.eps)
+        grad /= self.y_true.shape[0]
+        
         return grad
 
 class L2Scheduler:

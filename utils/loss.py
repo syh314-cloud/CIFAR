@@ -53,34 +53,35 @@ class FocalLoss:
 
     def forward(self, y_pred, y_true, model=None, lambda_l2=1e-4):
         """
-        多分类 Focal Loss
-        FL = - (1 - p_t)^γ * log(p_t)
-        p_t = ∑ y_true * y_pred
+        多分类 Focal Loss:
+        FL = - ∑ y_true * (1 - y_pred)^γ * log(y_pred)
         """
-        self.y_pred = np.clip(y_pred, self.eps, 1.0 - self.eps)
         self.y_true = y_true
+        self.y_pred = np.clip(y_pred, self.eps, 1.0 - self.eps)
         
-        p_t = np.sum(self.y_true * self.y_pred, axis=1, keepdims=True)
-        loss = -np.mean(((1 - p_t) ** self.gamma) * np.log(p_t))
+        loss = -np.mean(np.sum(
+            self.y_true * ((1 - self.y_pred) ** self.gamma) * np.log(self.y_pred),
+            axis=1
+        ))
 
-        # L2 正则化
+        # L2 正则
         if model is not None:
             l2_reg = 0
             for layer in model.layers:
                 if hasattr(layer, "w"):
                     l2_reg += np.sum(layer.w ** 2)
             loss += (lambda_l2 / (2 * y_true.shape[0])) * l2_reg
+
         return loss
 
     def backward(self):
         """
-        ∂FL/∂y_pred = -y_true * [(1-p_t)^γ * (1/p_t) - γ(1-p_t)^{γ-1} * log(p_t)]
+        对 softmax 输出 y_pred 求导：
+        dFL/dy_pred = -y_true * (1 - y_pred)^γ * (1 / y_pred)
+                      + γ * y_true * (1 - y_pred)^{γ-1} * log(y_pred)
         """
-        p_t = np.sum(self.y_true * self.y_pred, axis=1, keepdims=True)
-        log_p_t = np.log(p_t + self.eps)
-        term1 = (1 - p_t) ** self.gamma * (1 / (p_t + self.eps))
-        term2 = self.gamma * (1 - p_t) ** (self.gamma - 1) * log_p_t
-        grad = -self.y_true * (term1 - term2)
+        grad = -self.y_true * ((1 - self.y_pred) ** self.gamma) / self.y_pred \
+               + self.gamma * self.y_true * ((1 - self.y_pred) ** (self.gamma - 1)) * np.log(self.y_pred)
         grad /= self.y_true.shape[0]
         return grad
 

@@ -115,12 +115,8 @@ class LossFunctionExperiment:
                 step_losses.append(loss)  # 记录每个step的loss
                 epoch_losses.append(loss)
                 
-                # 根据损失函数类型选择backward方法
-                if loss_config['use_custom_backward']:
-                    grad_output = loss_fn.backward(y_pred, y)
-                else:
-                    grad_output = loss_fn.backward()
-                
+                # 调用backward方法
+                grad_output = loss_fn.backward()
                 model.backward(grad_output)
                 
                 # 添加L2正则化梯度

@@ -42,28 +42,13 @@ class LossFunctionExperiment:
         self.learning_rate = 7e-05
         self.batch_size = 64
         
-        # 要测试的损失函数配置
+        # 只测试FocalLoss
         self.loss_configs = {
-            'CrossEntropy': {
-                'class': CrossEntropyLoss,
-                'params': {},
-                'use_custom_backward': False
-            },
-            'LabelSmoothing(α=0.1)': {
-                'class': LabelSmoothingLoss,
-                'params': {'alpha': 0.1},
-                'use_custom_backward': False
-            },
-            'LabelSmoothing(α=0.2)': {
-                'class': LabelSmoothingLoss,
-                'params': {'alpha': 0.2},
-                'use_custom_backward': False
-            },
             'FocalLoss(γ=2.0)': {
                 'class': FocalLoss,
                 'params': {'gamma': 2.0},
                 'use_custom_backward': True
-            },
+            }
         }
         
         self.results = {}
@@ -219,14 +204,11 @@ class LossFunctionExperiment:
         # 创建图表
         plt.close('all')  # 关闭之前的图表
         fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-        fig.suptitle('Loss Function Comparison Results', fontsize=18, fontweight='bold', y=0.98)
+        fig.suptitle('FocalLoss Training Results (γ=2.0)', fontsize=18, fontweight='bold', y=0.98)
         
-        # 定义颜色方案 - 使用更易区分的颜色
+        # 定义颜色方案
         colors = {
-            'CrossEntropy': '#FF6B6B',           # 红色
-            'LabelSmoothing(α=0.1)': '#4ECDC4',  # 青色
-            'LabelSmoothing(α=0.2)': '#FFA500',  # 橙色
-            'FocalLoss(γ=2.0)': '#9B59B6'        # 紫色
+            'FocalLoss(γ=2.0)': '#FF6B6B'  # 红色
         }
         
         # 1. 训练Loss曲线 (按step)

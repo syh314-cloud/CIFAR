@@ -55,16 +55,23 @@ class FocalLoss:
         """
         Focal Loss = -∑(1-p_t)^gamma * log(p_t)
         p_t = p if y=1, else 1-p
+        
+        对于多分类问题：
+        - y_true是one-hot向量 [batch_size, num_classes]
+        - y_pred是softmax输出 [batch_size, num_classes]
         """
         self.y_pred = np.clip(y_pred, self.eps, 1.0 - self.eps)
         self.y_true = y_true
         
-        # 计算每个样本对应真实类别的预测概率
-        p_t = np.sum(y_true * self.y_pred, axis=1)  # [batch_size]
+        # 对于正样本，p_t就是预测概率
+        # 对于负样本，p_t是1减去预测概率
+        p_t = self.y_true * self.y_pred + (1 - self.y_true) * (1 - self.y_pred)
         
         # 计算focal loss
+        # 只对正样本类别计算loss（y_true=1的位置）
         focal_weight = (1 - p_t) ** self.gamma
-        loss = -np.mean(focal_weight * np.log(p_t))
+        per_sample_loss = -focal_weight * np.log(p_t + self.eps)
+        loss = np.mean(np.sum(self.y_true * per_sample_loss, axis=1))
         
         # L2正则化
         if model is not None:
@@ -78,16 +85,19 @@ class FocalLoss:
     def backward(self):
         """
         Focal Loss的梯度
-        d(FL)/dy_pred = -alpha * y_true * (1-p_t)^(gamma-1) * (gamma*p_t*log(p_t) + p_t - 1) / p_t
+        
+        对于正样本(y=1)：grad = -(1-p)^gamma * (1/p)
+        对于负样本(y=0)：grad = 0
         """
-        # 计算每个样本对应真实类别的预测概率
-        p_t = np.sum(self.y_true * self.y_pred, axis=1, keepdims=True)  # [batch_size, 1]
+        # 计算p_t
+        p_t = self.y_true * self.y_pred + (1 - self.y_true) * (1 - self.y_pred)
         
         # 计算focal weight
-        focal_weight = (1 - p_t) ** (self.gamma - 1)
+        focal_weight = (1 - p_t) ** self.gamma
         
         # 计算梯度
-        grad = -self.y_true * focal_weight * (self.gamma * p_t * np.log(p_t) + p_t - 1) / (p_t + self.eps)
+        # 只对正样本类别计算梯度（y_true=1的位置）
+        grad = -self.y_true * focal_weight * (1 / (self.y_pred + self.eps))
         grad /= self.y_true.shape[0]
         
         return grad

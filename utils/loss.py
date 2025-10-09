@@ -30,9 +30,9 @@ class LabelSmoothingLoss:
         self.y_pred = y_pred
         self.y_true = y_true
         K = y_true.shape[1]
-        smooth_labels = (1-self.alpha)*y_true + self.alpha/K
+        self.smooth_labels = (1-self.alpha)*y_true + self.alpha/K  # 保存为实例变量
         eps = 1e-7
-        loss = -np.sum(smooth_labels * np.log(y_pred+eps))/y_pred.shape[0]
+        loss = -np.sum(self.smooth_labels * np.log(y_pred+eps))/y_pred.shape[0]
         if model is not None:
             l2_reg = 0
             for layer in model.layers:
@@ -42,7 +42,8 @@ class LabelSmoothingLoss:
         return loss
 
     def backward(self):
-        dz = (self.y_pred - self.y_true)
+        # 使用平滑后的标签计算梯度，而不是原始标签
+        dz = (self.y_pred - self.smooth_labels)
         return dz
 
 class FocalLoss:

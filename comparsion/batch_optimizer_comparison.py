@@ -245,19 +245,26 @@ class BatchOptimizerExperiment:
             'AdaptiveBatchGD': '#9B59B6' # 紫色
         }
         
-        # 1. 训练Loss曲线 (按step)
+        # 1. 训练Loss曲线 (按epoch，每个epoch取平均loss)
         ax1 = axes[0, 0]
         for opt_name, result in self.results.items():
             step_losses_np = self._to_numpy(result['step_losses'])
-            steps = range(len(step_losses_np))
-            # 每隔一定步数采样，避免图表过于密集
-            sample_interval = 100  # 固定采样间隔为100步
-            sampled_steps = steps[::sample_interval]
-            sampled_losses = step_losses_np[::sample_interval]
-            ax1.plot(sampled_steps, sampled_losses, label=opt_name, 
-                    color=colors.get(opt_name, 'gray'), linewidth=1.5, alpha=0.8)
-        ax1.set_title('Training Loss Curves (Sampled every 100 steps)', fontsize=14, fontweight='bold', pad=15)
-        ax1.set_xlabel('Training Steps', fontsize=12)
+            steps_per_epoch = result['steps_per_epoch']
+            
+            # 计算每个epoch的平均loss
+            epoch_losses = []
+            for epoch in range(self.epochs):
+                start_idx = epoch * steps_per_epoch
+                end_idx = min((epoch + 1) * steps_per_epoch, len(step_losses_np))
+                if start_idx < len(step_losses_np):
+                    epoch_loss = np.mean(step_losses_np[start_idx:end_idx])
+                    epoch_losses.append(epoch_loss)
+            
+            epochs = range(len(epoch_losses))
+            ax1.plot(epochs, epoch_losses, label=opt_name, 
+                    color=colors.get(opt_name, 'gray'), linewidth=2, alpha=0.8)
+        ax1.set_title('Training Loss Curves (Average per Epoch)', fontsize=14, fontweight='bold', pad=15)
+        ax1.set_xlabel('Epoch', fontsize=12)
         ax1.set_ylabel('Loss', fontsize=12)
         ax1.set_xlim(left=0)  # 确保X轴从0开始
         ax1.legend(fontsize=10, loc='upper right')

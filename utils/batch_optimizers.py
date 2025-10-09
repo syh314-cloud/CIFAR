@@ -76,7 +76,9 @@ class AdaptiveBatchGD:
     def get_adaptive_batch_size(self):
         if len(self.gradient_history) < 5:
             return self.current_batch_size
-        grad_var = np.var(self.gradient_history[-5:])
+        # 将列表转换为数组再计算方差
+        grad_history_array = np.array(self.gradient_history[-5:])
+        grad_var = np.var(grad_history_array)
         if grad_var > 0.1:  
             self.current_batch_size = min(self.current_batch_size * 2, self.max_batch_size)
         elif grad_var < 0.01: 

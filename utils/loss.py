@@ -52,39 +52,30 @@ class FocalLoss:
         self.eps = 1e-7
 
     def forward(self, y_pred, y_true, model=None, lambda_l2=1e-4):
-        """
-        多分类 Focal Loss:
-        FL = - ∑ y_true * (1 - y_pred)^γ * log(y_pred)
-        """
-        self.y_true = y_true
+        """保存必要变量供 backward 使用"""
         self.y_pred = np.clip(y_pred, self.eps, 1.0 - self.eps)
-        
-        loss = -np.mean(np.sum(
-            self.y_true * ((1 - self.y_pred) ** self.gamma) * np.log(self.y_pred),
-            axis=1
-        ))
+        self.y_true = y_true
 
-        # L2 正则
+        focal_weight = (1 - self.y_pred) ** self.gamma
+        loss = -np.mean(np.sum(self.y_true * focal_weight * np.log(self.y_pred), axis=1))
+
         if model is not None:
             l2_reg = 0
             for layer in model.layers:
                 if hasattr(layer, "w"):
                     l2_reg += np.sum(layer.w ** 2)
             loss += (lambda_l2 / (2 * y_true.shape[0])) * l2_reg
-
         return loss
 
     def backward(self):
-        """
-        对 softmax 输出 y_pred 求导：
-        dFL/dy_pred = -y_true * (1 - y_pred)^γ * (1 / y_pred)
-                      + γ * y_true * (1 - y_pred)^{γ-1} * log(y_pred)
-        """
-        grad = -self.y_true * ((1 - self.y_pred) ** self.gamma) / self.y_pred \
-               + self.gamma * self.y_true * ((1 - self.y_pred) ** (self.gamma - 1)) * np.log(self.y_pred)
+        """使用 forward 保存的 y_true, y_pred"""
+        focal_weight = (1 - self.y_pred) ** self.gamma
+        term1 = -self.y_true * focal_weight / self.y_pred
+        term2 = self.gamma * self.y_true * ((1 - self.y_pred) ** (self.gamma - 1)) * np.log(self.y_pred)
+        grad = term1 + term2
         grad /= self.y_true.shape[0]
         return grad
-
+        
 class L2Scheduler:
     def __init__(self, base_lambda=1e-4, min_lambda=1e-6, max_lambda=1e-2, patience=3, factor=2):
         self.base_lambda = base_lambda

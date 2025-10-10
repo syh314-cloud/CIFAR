@@ -218,6 +218,8 @@ class BatchOptimizerExperiment:
             step_losses = [float(x.get() if hasattr(x, 'get') else x) for x in result['step_losses']]
             val_accuracies = [float(x.get() if hasattr(x, 'get') else x) for x in result['val_accuracies']]
             test_accuracy = float(result['test_accuracy'].get() if hasattr(result['test_accuracy'], 'get') else result['test_accuracy'])
+            # 从优化器配置中获取学习率
+            learning_rate = self.optimizers_config[opt_name]['params']['lr']
             results_to_save[opt_name] = {
                 'step_losses': step_losses,
                 'val_accuracies': val_accuracies,
@@ -225,7 +227,7 @@ class BatchOptimizerExperiment:
                 'optimizer_name': result['optimizer_name'],
                 'steps_per_epoch': result['steps_per_epoch'],
                 'actual_batch_size': result['actual_batch_size'],
-                'learning_rate': self.learning_rate,
+                'learning_rate': learning_rate,
                 'batch_size': self.batch_size
             }
         

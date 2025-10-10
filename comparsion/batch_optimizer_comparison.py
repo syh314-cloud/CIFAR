@@ -38,16 +38,19 @@ class BatchOptimizerExperiment:
         self.SEED = 2023
         np.random.seed(self.SEED)
         
-        # 固定超参数
-        self.learning_rate = 7e-05
+        # 基准batch size
         self.batch_size = 64
         
-        # 要测试的优化器配置 - AdaptiveBatchGD排在第一个
+        # 为每个优化器设置合理的学习率，让它们都在"合理工作点"
+        # AdaptiveBatchGD：1e-4
+        # MiniBatchGD (batch=64)：7e-5
+        # OnlineGD (batch=1)：3e-4
+        # BatchGD (full batch)：1e-3
         self.optimizers_config = {
-            'AdaptiveBatchGD': {'class': AdaptiveBatchGD, 'params': {'lr': self.learning_rate}},
-            'BatchGD': {'class': BatchGD, 'params': {'lr': self.learning_rate}},
-            'OnlineGD': {'class': OnlineGD, 'params': {'lr': self.learning_rate}},
-            'MiniBatchGD': {'class': MiniBatchGD, 'params': {'lr': self.learning_rate}},
+            'AdaptiveBatchGD': {'class': AdaptiveBatchGD, 'params': {'lr': 1e-4}},
+            'MiniBatchGD': {'class': MiniBatchGD, 'params': {'lr': 7e-5}},
+            'OnlineGD': {'class': OnlineGD, 'params': {'lr': 3e-4}},
+            'BatchGD': {'class': BatchGD, 'params': {'lr': 1e-3}},
         }
         
         self.results = {}

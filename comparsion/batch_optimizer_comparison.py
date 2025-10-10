@@ -101,8 +101,8 @@ class BatchOptimizerExperiment:
                 current_batch_size = optimizer.get_adaptive_batch_size()
                 print(f"    Epoch {epoch}: Adaptive batch size = {current_batch_size}")
             
-            # 设置dropout策略
-            if epoch < 20:
+            # 设置dropout策略 - 从epoch 10开始启用
+            if epoch < 10:
                 model.dropout1.p = 0.0
                 model.dropout2.p = 0.0
                 model.dropout3.p = 0.0
@@ -188,9 +188,12 @@ class BatchOptimizerExperiment:
     def run_experiments(self):
         """运行所有实验"""
         print(f"\n🎯 开始Batch Optimizer对比实验...")
-        print(f"📊 固定学习率: {self.learning_rate}")
         print(f"📦 基准Batch Size: {self.batch_size}")
-        print(f"🔧 测试优化器: {list(self.optimizers_config.keys())}")
+        print(f"🔧 测试优化器及其学习率:")
+        for opt_name, opt_config in self.optimizers_config.items():
+            lr = opt_config['params']['lr']
+            print(f"   • {opt_name}: {lr}")
+        print(f"💧 Dropout启用时间: epoch >= 10")
         print("-" * 60)
         
         for i, (opt_name, opt_config) in enumerate(self.optimizers_config.items()):

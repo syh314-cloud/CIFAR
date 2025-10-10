@@ -197,7 +197,7 @@ class L2RegularizationExperiment:
         test_accs = [self._to_numpy(self.results[name]['test_accuracy']) for name in l2_names]
         
         # 设置柱状图参数
-        x = np.arange(len(l2_names))  # 标签位置
+        x = self._to_numpy(np.arange(len(l2_names)))  # 标签位置，转换为NumPy数组
         width = 0.35  # 柱子宽度
         
         # 绘制柱状图

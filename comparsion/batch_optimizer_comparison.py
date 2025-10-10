@@ -45,12 +45,12 @@ class BatchOptimizerExperiment:
         # AdaptiveBatchGD：1e-4
         # MiniBatchGD (batch=64)：7e-5
         # OnlineGD (batch=1)：3e-4
-        # BatchGD (full batch)：1e-3
+        # BatchGD (full batch)：3e-4
         self.optimizers_config = {
             'AdaptiveBatchGD': {'class': AdaptiveBatchGD, 'params': {'lr': 1e-4}},
             'MiniBatchGD': {'class': MiniBatchGD, 'params': {'lr': 7e-5}},
             'OnlineGD': {'class': OnlineGD, 'params': {'lr': 3e-4}},
-            'BatchGD': {'class': BatchGD, 'params': {'lr': 1e-3}},
+            'BatchGD': {'class': BatchGD, 'params': {'lr': 3e-4}},
         }
         
         self.results = {}

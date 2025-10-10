@@ -42,12 +42,12 @@ class BatchOptimizerExperiment:
         self.learning_rate = 7e-05
         self.batch_size = 64
         
-        # 要测试的优化器配置
+        # 要测试的优化器配置 - AdaptiveBatchGD排在第一个
         self.optimizers_config = {
+            'AdaptiveBatchGD': {'class': AdaptiveBatchGD, 'params': {'lr': self.learning_rate}},
             'BatchGD': {'class': BatchGD, 'params': {'lr': self.learning_rate}},
             'OnlineGD': {'class': OnlineGD, 'params': {'lr': self.learning_rate}},
             'MiniBatchGD': {'class': MiniBatchGD, 'params': {'lr': self.learning_rate}},
-            'AdaptiveBatchGD': {'class': AdaptiveBatchGD, 'params': {'lr': self.learning_rate}},
         }
         
         self.results = {}

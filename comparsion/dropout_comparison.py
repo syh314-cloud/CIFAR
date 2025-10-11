@@ -210,13 +210,29 @@ class DropoutExperiment:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f'dropout_comparison_results_{timestamp}.json'
         
+        # 预处理结果，确保所有数据都是可序列化的
+        def process_results(results_dict):
+            processed = {}
+            for config_name, result in results_dict.items():
+                processed[config_name] = {
+                    'step_losses': [float(x) if hasattr(x, 'get') else float(x) for x in result['step_losses']],
+                    'val_accuracies': [float(x) if hasattr(x, 'get') else float(x) for x in result['val_accuracies']],
+                    'best_val_accuracy': float(result['best_val_accuracy']),
+                    'test_accuracy': float(result['test_accuracy']),
+                    'warmup_epochs': result['warmup_epochs'],
+                    'dropout_p': result['dropout_p'],
+                    'learning_rate': float(result['learning_rate']),
+                    'batch_size': int(result['batch_size'])
+                }
+            return processed
+        
         results = {
-            'group1': self.results_group1,
-            'group2': self.results_group2
+            'group1': process_results(self.results_group1),
+            'group2': process_results(self.results_group2)
         }
         
         with open(filename, 'w') as f:
-            json.dump(results, f, indent=2, default=lambda x: x.tolist() if isinstance(x, np.ndarray) else x)
+            json.dump(results, f, indent=2)
         
         print(f"\n📁 结果已保存到: {filename}")
     

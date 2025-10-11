@@ -280,16 +280,22 @@ class BatchOptimizerExperiment:
         # 1. 训练Loss曲线 (按epoch，每个epoch取平均loss)
         ax1 = axes[0, 0]
         for opt_name, result in self.results.items():
-            step_losses_np = self._to_numpy(result['step_losses'])
+            # 先转换为numpy，再计算
+            step_losses_cupy = result['step_losses']
             steps_per_epoch = result['steps_per_epoch']
             
-            # 计算每个epoch的平均loss
+            # 计算每个epoch的平均loss (在CuPy上计算，然后转换)
             epoch_losses = []
             for epoch in range(self.epochs):
                 start_idx = epoch * steps_per_epoch
-                end_idx = min((epoch + 1) * steps_per_epoch, len(step_losses_np))
-                if start_idx < len(step_losses_np):
-                    epoch_loss = np.mean(step_losses_np[start_idx:end_idx])
+                end_idx = min((epoch + 1) * steps_per_epoch, len(step_losses_cupy))
+                if start_idx < len(step_losses_cupy):
+                    epoch_loss = np.mean(np.array(step_losses_cupy[start_idx:end_idx]))
+                    # 转换为标量
+                    if hasattr(epoch_loss, 'get'):
+                        epoch_loss = float(epoch_loss.get())
+                    else:
+                        epoch_loss = float(epoch_loss)
                     epoch_losses.append(epoch_loss)
             
             epochs = range(len(epoch_losses))

@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import json
 import os
 from datetime import datetime
+from collections import OrderedDict
 
 # 设置中文字体和显示参数
 plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans', 'sans-serif']
@@ -42,16 +43,17 @@ class BatchOptimizerExperiment:
         self.batch_size = 64
         
         # 为每个优化器设置合理的学习率，让它们都在"合理工作点"
-        # AdaptiveBatchGD：1e-4
-        # MiniBatchGD (batch=64)：7e-5
-        # OnlineGD (batch=1)：3e-4
-        # BatchGD (full batch)：3e-4
-        self.optimizers_config = {
-            'AdaptiveBatchGD': {'class': AdaptiveBatchGD, 'params': {'lr': 1e-4}},
-            'MiniBatchGD': {'class': MiniBatchGD, 'params': {'lr': 7e-5}},
-            'OnlineGD': {'class': OnlineGD, 'params': {'lr': 3e-4}},
-            'BatchGD': {'class': BatchGD, 'params': {'lr': 3e-4}},
-        }
+        # MiniBatchGD (batch=64)：7e-5 - 第一个训练
+        # BatchGD (full batch)：3e-4 - 第二个训练
+        # AdaptiveBatchGD：1e-4 - 第三个训练
+        # OnlineGD (batch=1)：3e-4 - 第四个训练
+        # 使用 OrderedDict 保证顺序
+        self.optimizers_config = OrderedDict([
+            ('MiniBatchGD', {'class': MiniBatchGD, 'params': {'lr': 7e-5}}),
+            ('BatchGD', {'class': BatchGD, 'params': {'lr': 3e-4}}),
+            ('AdaptiveBatchGD', {'class': AdaptiveBatchGD, 'params': {'lr': 1e-4}}),
+            ('OnlineGD', {'class': OnlineGD, 'params': {'lr': 3e-4}}),
+        ])
         
         self.results = {}
         self.epochs = 100
@@ -122,39 +124,61 @@ class BatchOptimizerExperiment:
             # BatchGD特殊处理：累积整个epoch的梯度
             if optimizer_name == 'BatchGD':
                 optimizer.reset()  # 重置累积的梯度
-            
-            for i in range(0, shuffled_images.shape[0], current_batch_size):
-                epoch_steps += 1
-                x = shuffled_images[i:i+current_batch_size]
-                y = shuffled_labels[i:i+current_batch_size]
-                
-                x = x.reshape(-1, 3, 32, 32)
-                x = augment_images(x, seed=self.SEED + epoch * 1000 + i)
-                x = x.reshape(x.shape[0], -1)
-                
-                model.zero_grad()
-                y_pred = model.forward(x, training=True)
-          
-                loss = loss_fn.forward(y_pred, y, model, lambda_l2=lambda_l2)
-                step_losses.append(loss)  # 记录每个step的loss
-                epoch_losses.append(loss)
-                
-                grad_output = loss_fn.backward()
-                model.backward(grad_output)
-                
-                for layer in model.layers:
-                    if hasattr(layer, 'w'):
-                        layer.dw += lambda_l2 * layer.w
-                
-                # 根据优化器类型调用不同的更新策略
-                if optimizer_name == 'BatchGD':
+                # BatchGD需要遍历所有mini-batch来累积梯度
+                mini_batch_size = 64  # 使用小批量来遍历数据
+                for i in range(0, shuffled_images.shape[0], mini_batch_size):
+                    epoch_steps += 1
+                    x = shuffled_images[i:i+mini_batch_size]
+                    y = shuffled_labels[i:i+mini_batch_size]
+                    
+                    x = x.reshape(-1, 3, 32, 32)
+                    x = augment_images(x, seed=self.SEED + epoch * 1000 + i)
+                    x = x.reshape(x.shape[0], -1)
+                    
+                    model.zero_grad()
+                    y_pred = model.forward(x, training=True)
+              
+                    loss = loss_fn.forward(y_pred, y, model, lambda_l2=lambda_l2)
+                    step_losses.append(loss)  # 记录每个step的loss
+                    epoch_losses.append(loss)
+                    
+                    grad_output = loss_fn.backward()
+                    model.backward(grad_output)
+                    
+                    for layer in model.layers:
+                        if hasattr(layer, 'w'):
+                            layer.dw += lambda_l2 * layer.w
+                    
                     optimizer.accumulate_gradients(model)
-                else:
-                    optimizer.step(model)
-            
-            # BatchGD在epoch结束后统一更新
-            if optimizer_name == 'BatchGD':
+                
+                # BatchGD在epoch结束后统一更新
                 optimizer.step(model)
+            else:
+                # 其他优化器正常训练
+                for i in range(0, shuffled_images.shape[0], current_batch_size):
+                    epoch_steps += 1
+                    x = shuffled_images[i:i+current_batch_size]
+                    y = shuffled_labels[i:i+current_batch_size]
+                    
+                    x = x.reshape(-1, 3, 32, 32)
+                    x = augment_images(x, seed=self.SEED + epoch * 1000 + i)
+                    x = x.reshape(x.shape[0], -1)
+                    
+                    model.zero_grad()
+                    y_pred = model.forward(x, training=True)
+              
+                    loss = loss_fn.forward(y_pred, y, model, lambda_l2=lambda_l2)
+                    step_losses.append(loss)  # 记录每个step的loss
+                    epoch_losses.append(loss)
+                    
+                    grad_output = loss_fn.backward()
+                    model.backward(grad_output)
+                    
+                    for layer in model.layers:
+                        if hasattr(layer, 'w'):
+                            layer.dw += lambda_l2 * layer.w
+                    
+                    optimizer.step(model)
             
             # 统计平均步数
             steps_per_epoch += epoch_steps

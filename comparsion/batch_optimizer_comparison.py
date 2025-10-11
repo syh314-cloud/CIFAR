@@ -104,7 +104,7 @@ class BatchOptimizerExperiment:
                 print(f"    Epoch {epoch}: Adaptive batch size = {current_batch_size}")
             
             # 设置dropout策略 - 从epoch 10开始启用
-            if epoch < 10:
+            if epoch < 20:
                 model.dropout1.p = 0.0
                 model.dropout2.p = 0.0
                 model.dropout3.p = 0.0

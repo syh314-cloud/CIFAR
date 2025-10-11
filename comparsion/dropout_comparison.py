@@ -29,9 +29,8 @@ plt.rcParams['font.size'] = 10
 
 from utils.data_loader import train_images, train_labels, val_images, val_labels, test_images, test_labels
 from model.mlp_4layer import MLP
-from utils.loss import CrossEntropyLoss, L2Scheduler
+from utils.loss import CrossEntropyLoss
 from utils.classic_optimizers import Adam
-from utils.data_augmentation import augment_images
 
 class DropoutExperiment:
     def __init__(self):
@@ -84,10 +83,8 @@ class DropoutExperiment:
         # 创建模型（与L2实验相同的结构）
         model = MLP(train_images.shape[1], 1024, 512, 256, train_labels.shape[1])
         loss_fn = CrossEntropyLoss()
-        l2_scheduler = L2Scheduler(base_lambda=1e-4)
         optimizer = Adam(self.learning_rate, beta1=0.9, beta2=0.999)
         
-        lambda_l2 = l2_scheduler.base_lambda
         warmup_epochs = config['warmup']
         dropout_p = config['p']
         
@@ -119,25 +116,16 @@ class DropoutExperiment:
                 x = shuffled_images[i:i+self.batch_size]
                 y = shuffled_labels[i:i+self.batch_size]
                 
-                # 数据增强（与L2实验相同）
-                x = x.reshape(-1, 3, 32, 32)
-                x = augment_images(x, seed=self.SEED + epoch * 1000 + i)
-                x = x.reshape(x.shape[0], -1)
-                
                 model.zero_grad()
                 y_pred = model.forward(x, training=True)
           
-                loss = loss_fn.forward(y_pred, y, model, lambda_l2=lambda_l2)
+                # 不使用L2正则化
+                loss = loss_fn.forward(y_pred, y, model, lambda_l2=0.0)
                 step_losses.append(loss)
                 epoch_losses.append(loss)
                 
                 grad_output = loss_fn.backward()
                 model.backward(grad_output)
-                
-                # 添加L2正则化梯度
-                for layer in model.layers:
-                    if hasattr(layer, 'w'):
-                        layer.dw += lambda_l2 * layer.w
                 
                 optimizer.step(model)
             
@@ -192,8 +180,7 @@ class DropoutExperiment:
         print(f"  - 学习率: {self.learning_rate}")
         print(f"  - Batch Size: {self.batch_size}")
         print(f"  - Epochs: {self.epochs}")
-        print(f"  - L2正则化: 1e-4 (固定)")
-        print(f"  - 数据增强: 启用")
+        print(f"  - ❌ 已关闭L2正则化和数据增强")
         print(f"{'='*80}\n")
         
         # 第一组实验：前10个epoch关闭Dropout

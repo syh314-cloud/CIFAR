@@ -7,13 +7,10 @@
 
 测试组合：
 1. Baseline（无正则化）
-2. L2 only
-3. Dropout only
-4. Data Augmentation only
-5. L2 + Dropout
-6. L2 + Data Augmentation
-7. Dropout + Data Augmentation
-8. L2 + Dropout + Data Augmentation（全部组合）
+2. L2 + Dropout
+3. L2 + Data Augmentation
+4. Dropout + Data Augmentation
+5. L2 + Dropout + Data Augmentation（全部组合）
 
 目标：找到最佳正则化配置
 """
@@ -73,27 +70,6 @@ class RegularizationCombinationExperiment:
                 'use_dropout': False,
                 'use_augmentation': False,
                 'description': '无正则化'
-            },
-            'L2': {
-                'name': 'L2 Only',
-                'use_l2': True,
-                'use_dropout': False,
-                'use_augmentation': False,
-                'description': f'L2正则化 (λ={self.l2_lambda})'
-            },
-            'Dropout': {
-                'name': 'Dropout Only',
-                'use_l2': False,
-                'use_dropout': True,
-                'use_augmentation': False,
-                'description': f'Dropout (Warmup={self.dropout_warmup}, p={self.dropout_p})'
-            },
-            'Augmentation': {
-                'name': 'Data Aug Only',
-                'use_l2': False,
-                'use_dropout': False,
-                'use_augmentation': True,
-                'description': '数据增强 (Crop + Flip)'
             },
             'L2_Dropout': {
                 'name': 'L2 + Dropout',
@@ -301,14 +277,10 @@ class RegularizationCombinationExperiment:
         fig = plt.figure(figsize=(20, 10))
         
         # 定义配置顺序和分组
-        config_order = ['Baseline', 'L2', 'Dropout', 'Augmentation', 
-                       'L2_Dropout', 'L2_Augmentation', 'Dropout_Augmentation', 'All']
+        config_order = ['Baseline', 'L2_Dropout', 'L2_Augmentation', 'Dropout_Augmentation', 'All']
         
         colors = {
             'Baseline': '#95a5a6',
-            'L2': '#3498db',
-            'Dropout': '#e74c3c',
-            'Augmentation': '#2ecc71',
             'L2_Dropout': '#9b59b6',
             'L2_Augmentation': '#f39c12',
             'Dropout_Augmentation': '#1abc9c',
@@ -396,23 +368,19 @@ class RegularizationCombinationExperiment:
         ax3.set_xticklabels(improvement_names, rotation=30, ha='right', fontsize=8)
         ax3.grid(True, alpha=0.3, linestyle='--', axis='y')
         
-        # 4. 单独方法 vs 组合方法对比
+        # 4. 组合方法对比
         ax4 = plt.subplot(2, 3, 4)
-        
-        single_methods = ['L2', 'Dropout', 'Augmentation']
-        single_accs = [self.results[name]['test_accuracy'] for name in single_methods]
         
         combined_methods = ['L2_Dropout', 'L2_Augmentation', 'Dropout_Augmentation', 'All']
         combined_accs = [self.results[name]['test_accuracy'] for name in combined_methods]
         
-        x_single = self._to_numpy(np.arange(len(single_methods)))
         x_combined = self._to_numpy(np.arange(len(combined_methods)))
         
-        bars1 = ax4.bar(x_single, single_accs, 
-                       color=[colors[name] for name in single_methods],
-                       alpha=0.8, edgecolor='black', linewidth=0.8, label='Single')
+        bars1 = ax4.bar(x_combined, combined_accs,
+                       color=[colors[name] for name in combined_methods],
+                       alpha=0.8, edgecolor='black', linewidth=0.8)
         
-        for i, bar in enumerate(bars1):
+        for bar in bars1:
             height = bar.get_height()
             ax4.text(bar.get_x() + bar.get_width()/2., height,
                     f'{height:.4f}',
@@ -420,36 +388,45 @@ class RegularizationCombinationExperiment:
         
         ax4.axhline(y=baseline_test, color='#95a5a6', linestyle='--', linewidth=2, label='Baseline')
         ax4.set_ylabel('Test Accuracy', fontsize=11)
-        ax4.set_title('Single Regularization Methods', fontsize=12, fontweight='bold')
-        ax4.set_xticks(x_single)
-        ax4.set_xticklabels([self.results[name]['display_name'] for name in single_methods], 
-                           rotation=20, ha='right', fontsize=9)
+        ax4.set_title('Combined Regularization Methods', fontsize=12, fontweight='bold')
+        ax4.set_xticks(x_combined)
+        ax4.set_xticklabels([self.results[name]['display_name'] for name in combined_methods],
+                           rotation=20, ha='right', fontsize=8)
         ax4.legend(loc='best', framealpha=0.9)
         ax4.grid(True, alpha=0.3, linestyle='--', axis='y')
         ax4.set_ylim([0, 1.0])
         
-        # 5. 组合方法对比
+        # 5. 泛化性能分析（验证集vs测试集差距）
         ax5 = plt.subplot(2, 3, 5)
         
-        bars2 = ax5.bar(x_combined, combined_accs,
-                       color=[colors[name] for name in combined_methods],
-                       alpha=0.8, edgecolor='black', linewidth=0.8)
+        all_configs = config_order
+        generalization_gaps = []
+        gap_names = []
+        gap_colors = []
         
-        for bar in bars2:
+        for config_name in all_configs:
+            if config_name in self.results:
+                result = self.results[config_name]
+                gap = result['best_val_accuracy'] - result['test_accuracy']
+                generalization_gaps.append(gap)
+                gap_names.append(result['display_name'])
+                gap_colors.append(colors[config_name])
+        
+        x_gap = self._to_numpy(np.arange(len(gap_names)))
+        bars = ax5.bar(x_gap, generalization_gaps, color=gap_colors, alpha=0.8, edgecolor='black', linewidth=0.8)
+        
+        for bar in bars:
             height = bar.get_height()
             ax5.text(bar.get_x() + bar.get_width()/2., height,
-                    f'{height:.4f}',
-                    ha='center', va='bottom', fontsize=8)
+                    f'{height:+.4f}',
+                    ha='center', va='bottom' if height > 0 else 'top', fontsize=8)
         
-        ax5.axhline(y=baseline_test, color='#95a5a6', linestyle='--', linewidth=2, label='Baseline')
-        ax5.set_ylabel('Test Accuracy', fontsize=11)
-        ax5.set_title('Combined Regularization Methods', fontsize=12, fontweight='bold')
-        ax5.set_xticks(x_combined)
-        ax5.set_xticklabels([self.results[name]['display_name'] for name in combined_methods],
-                           rotation=20, ha='right', fontsize=8)
-        ax5.legend(loc='best', framealpha=0.9)
+        ax5.axhline(y=0, color='black', linestyle='-', linewidth=1)
+        ax5.set_ylabel('Val - Test Accuracy Gap', fontsize=11)
+        ax5.set_title('Generalization Performance', fontsize=12, fontweight='bold')
+        ax5.set_xticks(x_gap)
+        ax5.set_xticklabels(gap_names, rotation=20, ha='right', fontsize=8)
         ax5.grid(True, alpha=0.3, linestyle='--', axis='y')
-        ax5.set_ylim([0, 1.0])
         
         # 6. 排名对比（Top配置）
         ax6 = plt.subplot(2, 3, 6)
@@ -534,19 +511,13 @@ class RegularizationCombinationExperiment:
         else:
             print(f"   ✅ 验证集和测试集准确率接近，泛化性能良好")
         
-        # 单独方法对比
-        print(f"\n📋 单独正则化方法效果:")
-        for method in ['L2', 'Dropout', 'Augmentation']:
-            result = self.results[method]
-            improvement = result['test_accuracy'] - baseline_test
-            print(f"   {result['display_name']:20s}: {result['test_accuracy']:.4f} ({improvement:+.4f})")
-        
         # 组合方法对比
-        print(f"\n📋 组合正则化方法效果:")
+        print(f"\n📋 各组合正则化方法效果:")
         for method in ['L2_Dropout', 'L2_Augmentation', 'Dropout_Augmentation', 'All']:
             result = self.results[method]
             improvement = result['test_accuracy'] - baseline_test
-            print(f"   {result['display_name']:25s}: {result['test_accuracy']:.4f} ({improvement:+.4f})")
+            gap = result['best_val_accuracy'] - result['test_accuracy']
+            print(f"   {result['display_name']:25s}: Test={result['test_accuracy']:.4f} ({improvement:+.4f}), Gap={gap:+.4f}")
         
         print(f"{'='*80}\n")
 

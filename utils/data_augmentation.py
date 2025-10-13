@@ -28,7 +28,11 @@ def random_rotate(images, max_angle=15):
     for i in range(images.shape[0]):
         angle = float(np.random.uniform(-max_angle, max_angle))
         for c in range(3):  
-            img_cpu = np_cpu.asarray(images[i, c]) if hasattr(images, 'get') else images[i, c]
+            # 正确处理CuPy数组转换
+            if hasattr(images, 'get'):  # CuPy数组
+                img_cpu = images[i, c].get()
+            else:  # NumPy数组
+                img_cpu = images[i, c]
             rotated_cpu = rotate(img_cpu, angle, reshape=False, mode='reflect')
             rotated[i, c] = np.asarray(rotated_cpu)
     return rotated

@@ -50,10 +50,6 @@ class DataAugmentationExperiment:
         # 要测试的数据增强方法 - 分为两组实验
         # 第一组：单独测试每种方法
         self.augmentation_configs_single = {
-            'Baseline': {
-                'name': 'No Augmentation',
-                'function': None
-            },
             'Flip': {
                 'name': 'Flip',
                 'function': lambda x: random_flip(x, prob=0.5)
@@ -247,7 +243,7 @@ class DataAugmentationExperiment:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # 定义颜色方案
-        colors_single = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#6A994E']
+        colors_single = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']
         colors_combined = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12']
         
         # ========== 第一组图表：单独测试每种方法 ==========

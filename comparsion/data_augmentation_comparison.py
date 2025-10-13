@@ -148,17 +148,11 @@ class DataAugmentationExperiment:
                 step_losses.append(loss)  # 记录每个step的loss
                 epoch_losses.append(loss)
                 
-                grad = loss_fn.backward()
+                grad_output = loss_fn.backward()
+                model.backward(grad_output)
                 
                 # 更新参数
-                grads = model.backward(grad)
-                for param_name, grad_value in grads.items():
-                    if param_name in model.params:
-                        model.params[param_name] = optimizer.step(
-                            model.params[param_name],
-                            grad_value,
-                            param_name
-                        )
+                optimizer.step(model)
             
             # 验证准确率
             val_pred = model.forward(val_images, training=False)

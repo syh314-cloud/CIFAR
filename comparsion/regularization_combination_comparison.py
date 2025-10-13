@@ -195,17 +195,30 @@ class RegularizationCombinationExperiment:
             # 验证准确率
             val_pred = model.forward(val_images, training=False)
             val_acc = np.mean(np.argmax(val_pred, axis=1) == np.argmax(val_labels, axis=1))
-            val_accuracies.append(float(val_acc))
+            
+            # 转换为Python float
+            if hasattr(val_acc, 'get'):
+                val_acc_scalar = float(val_acc.get())
+            else:
+                val_acc_scalar = float(val_acc)
+            
+            val_accuracies.append(val_acc_scalar)
             
             if (epoch + 1) % 10 == 0:
                 avg_loss = float(np.mean(np.array(epoch_losses)))
-                print(f"Epoch {epoch+1}/{self.epochs} - Loss: {avg_loss:.4f}, Val Acc: {val_acc:.4f}")
+                print(f"Epoch {epoch+1}/{self.epochs} - Loss: {avg_loss:.4f}, Val Acc: {val_acc_scalar:.4f}")
         
         # 测试准确率
         test_pred = model.forward(test_images, training=False)
         test_acc = np.mean(np.argmax(test_pred, axis=1) == np.argmax(test_labels, axis=1))
         
-        print(f"✅ 训练完成 - 最佳验证准确率: {max(val_accuracies):.4f}, 测试准确率: {test_acc:.4f}")
+        # 转换为Python float
+        if hasattr(test_acc, 'get'):
+            test_acc_scalar = float(test_acc.get())
+        else:
+            test_acc_scalar = float(test_acc)
+        
+        print(f"✅ 训练完成 - 最佳验证准确率: {max(val_accuracies):.4f}, 测试准确率: {test_acc_scalar:.4f}")
         
         return {
             'config_name': config_name,
@@ -215,9 +228,9 @@ class RegularizationCombinationExperiment:
             'use_dropout': config['use_dropout'],
             'use_augmentation': config['use_augmentation'],
             'step_losses': [float(x) for x in self._to_numpy(step_losses)],
-            'val_accuracies': [float(x) for x in val_accuracies],
-            'test_accuracy': float(test_acc),
-            'best_val_accuracy': float(max(val_accuracies)),
+            'val_accuracies': val_accuracies,  # 已经是Python float列表
+            'test_accuracy': test_acc_scalar,  # 已经是Python float
+            'best_val_accuracy': max(val_accuracies),  # 已经是Python float
             'steps_per_epoch': len(train_images) // self.batch_size
         }
     
@@ -260,7 +273,7 @@ class RegularizationCombinationExperiment:
                 'seed': self.SEED,
                 'l2_lambda': self.l2_lambda,
                 'dropout_warmup': self.dropout_warmup,
-                'dropout_p': self.dropout_p
+                'dropout_p': list(self.dropout_p)  # 转换元组为列表
             },
             'results': self.results
         }

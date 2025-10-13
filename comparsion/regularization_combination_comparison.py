@@ -2,7 +2,7 @@
 正则化组合对比实验
 固定参数：
 - L2正则化系数：5e-4
-- Dropout：Warmup=10, p=(0.2, 0.3, 0.2)
+- Dropout：Warmup=20, p=(0.2, 0.3, 0.2)
 - 数据增强：Crop + Flip
 
 测试组合：
@@ -59,7 +59,7 @@ class RegularizationCombinationExperiment:
         
         # 固定的正则化参数
         self.l2_lambda = 5e-4
-        self.dropout_warmup = 10
+        self.dropout_warmup = 20
         self.dropout_p = (0.2, 0.3, 0.2)  # (p1, p2, p3)
         
         # 定义所有测试配置

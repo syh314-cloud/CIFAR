@@ -135,7 +135,11 @@ class DataAugmentationExperiment:
                 
                 # 应用数据增强
                 if aug_config['function'] is not None:
+                    # 重塑为4D数组以应用数据增强
+                    x = x.reshape(-1, 3, 32, 32)
                     x = aug_config['function'](x.copy())
+                    # 重新扁平化
+                    x = x.reshape(x.shape[0], -1)
                 
                 model.zero_grad()
                 y_pred = model.forward(x, training=False)  # 不使用dropout

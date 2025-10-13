@@ -160,7 +160,7 @@ class DataAugmentationExperiment:
             val_accuracies.append(float(val_acc))
             
             if (epoch + 1) % 10 == 0:
-                avg_loss = np.mean(epoch_losses)
+                avg_loss = float(np.mean(np.array(epoch_losses)))
                 print(f"Epoch {epoch+1}/{self.epochs} - Loss: {avg_loss:.4f}, Val Acc: {val_acc:.4f}")
         
         # 测试准确率

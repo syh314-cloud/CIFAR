@@ -413,19 +413,19 @@ class DataAugmentationExperiment:
         ax1.legend(loc='best', framealpha=0.9)
         ax1.grid(True, alpha=0.3, linestyle='--')
         
-        # 1.2 训练集和测试集准确率柱状图
+        # 1.2 验证集和测试集准确率柱状图
         ax2 = plt.subplot(1, 3, 2)
         
         aug_names = sorted_names
-        train_accs = [self.results_single[name]['train_accuracy'] for name in aug_names]
+        val_accs = [self.results_single[name]['best_val_accuracy'] for name in aug_names]
         test_accs = [self.results_single[name]['test_accuracy'] for name in aug_names]
         
         x = self._to_numpy(np.arange(len(aug_names)))
         width = 0.35
         
-        bars1 = ax2.bar(x - width/2, train_accs, width, 
-                       label='Train Accuracy',
-                       color='#3498db', alpha=0.8, edgecolor='black', linewidth=0.8)
+        bars1 = ax2.bar(x - width/2, val_accs, width, 
+                       label='Validation Accuracy',
+                       color='#9b59b6', alpha=0.8, edgecolor='black', linewidth=0.8)
         bars2 = ax2.bar(x + width/2, test_accs, width,
                        label='Test Accuracy',
                        color='#e74c3c', alpha=0.8, edgecolor='black', linewidth=0.8)
@@ -440,7 +440,7 @@ class DataAugmentationExperiment:
         
         ax2.set_xlabel('Augmentation Method', fontsize=11)
         ax2.set_ylabel('Accuracy', fontsize=11)
-        ax2.set_title('Phase A: Train vs Test Accuracy', fontsize=12, fontweight='bold')
+        ax2.set_title('Phase A: Val vs Test Accuracy', fontsize=12, fontweight='bold')
         ax2.set_xticks(x)
         ax2.set_xticklabels(aug_names, rotation=20, ha='right', fontsize=9)
         ax2.legend(loc='best', framealpha=0.9)

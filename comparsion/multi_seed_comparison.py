@@ -123,6 +123,12 @@ class MultiSeedExperiment:
                 grad_output = loss_fn.backward()
                 model.backward(grad_output)
                 
+                # 添加L2正则化梯度
+                if self.l2_lambda > 0:
+                    for layer in model.layers:
+                        if hasattr(layer, 'w'):
+                            layer.dw += self.l2_lambda * layer.w
+                
                 optimizer.step(model)
             
             # 验证准确率

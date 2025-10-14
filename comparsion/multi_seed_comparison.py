@@ -378,8 +378,10 @@ class MultiSeedExperiment:
         # 5. 准确率稳定性（均值和标准差）
         ax5 = plt.subplot(3, 3, 5)
         
-        mean_test = np.mean(test_accs)
-        std_test = np.std(test_accs)
+        # 使用NumPy计算统计量
+        import numpy as np_stat
+        mean_test = np_stat.mean(test_accs)
+        std_test = np_stat.std(test_accs)
         
         ax5.bar(['Test Accuracy'], [mean_test], color='#2ecc71', alpha=0.8, 
                edgecolor='black', linewidth=0.8)
@@ -402,7 +404,7 @@ class MultiSeedExperiment:
         avg_precision = []
         for class_idx in range(10):
             class_precisions = [result['precision_per_class'][class_idx] for result in self.results.values()]
-            avg_precision.append(np.mean(class_precisions))
+            avg_precision.append(np_stat.mean(class_precisions))
         
         x_classes = self._to_numpy(np.arange(10))
         bars = ax6.bar(x_classes, avg_precision, color='#3498db', alpha=0.8,
@@ -422,7 +424,7 @@ class MultiSeedExperiment:
         avg_recall = []
         for class_idx in range(10):
             class_recalls = [result['recall_per_class'][class_idx] for result in self.results.values()]
-            avg_recall.append(np.mean(class_recalls))
+            avg_recall.append(np_stat.mean(class_recalls))
         
         bars = ax7.bar(x_classes, avg_recall, color='#e74c3c', alpha=0.8,
                       edgecolor='black', linewidth=0.8)
@@ -441,7 +443,7 @@ class MultiSeedExperiment:
         avg_f1 = []
         for class_idx in range(10):
             class_f1s = [result['f1_per_class'][class_idx] for result in self.results.values()]
-            avg_f1.append(np.mean(class_f1s))
+            avg_f1.append(np_stat.mean(class_f1s))
         
         bars = ax8.bar(x_classes, avg_f1, color='#2ecc71', alpha=0.8,
                       edgecolor='black', linewidth=0.8)
@@ -487,13 +489,15 @@ class MultiSeedExperiment:
         test_accs = [result['test_accuracy'] for result in self.results.values()]
         test_top5 = [result['test_top5_accuracy'] for result in self.results.values()]
         
-        mean_test = np.mean(test_accs)
-        std_test = np.std(test_accs)
-        min_test = np.min(test_accs)
-        max_test = np.max(test_accs)
+        # 使用NumPy计算统计量
+        import numpy as np_stat
+        mean_test = np_stat.mean(test_accs)
+        std_test = np_stat.std(test_accs)
+        min_test = np_stat.min(test_accs)
+        max_test = np_stat.max(test_accs)
         
-        mean_top5 = np.mean(test_top5)
-        std_top5 = np.std(test_top5)
+        mean_top5 = np_stat.mean(test_top5)
+        std_top5 = np_stat.std(test_top5)
         
         print("\n📊 测试集准确率统计:")
         print(f"  均值: {mean_test:.4f}")

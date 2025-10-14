@@ -16,19 +16,39 @@ def top_k_accuracy(y_pred,y_true,k=5):
     return np.mean(match)
 
 def confusion_matrix(y_pred,y_true,num_classes=10):
-    pred_labels = np.argmax(y_pred,axis=1)
-    true_labels = np.argmax(y_true,axis=1)
-    matrix = np.zeros((num_classes,num_classes),dtype=int)
-    for t,p in zip(true_labels,pred_labels):
-        matrix[t,p] += 1
+    # 确保使用NumPy进行计算
+    try:
+        import numpy as np_actual
+    except:
+        import numpy as np_actual
+    
+    # 转换为NumPy数组
+    if hasattr(y_pred, 'get'):
+        y_pred = y_pred.get()
+    if hasattr(y_true, 'get'):
+        y_true = y_true.get()
+    
+    pred_labels = np_actual.argmax(y_pred, axis=1)
+    true_labels = np_actual.argmax(y_true, axis=1)
+    
+    matrix = np_actual.zeros((num_classes, num_classes), dtype=int)
+    for t, p in zip(true_labels, pred_labels):
+        matrix[int(t), int(p)] += 1
     return matrix
 
 def classification_report(y_pred,y_true,class_names=None):
+    # 使用NumPy进行计算
+    try:
+        import numpy as np_actual
+    except:
+        import numpy as np_actual
+    
     cm = confusion_matrix(y_pred,y_true)
     if class_names is None:
         class_names = [f'Class_{i}' for i in range(cm.shape[0])]
-    precision = np.diag(cm) / (np.sum(cm,axis=0)+1e-8)
-    recall = np.diag(cm) / (np.sum(cm,axis=1)+1e-8)
+    
+    precision = np_actual.diag(cm) / (np_actual.sum(cm,axis=0)+1e-8)
+    recall = np_actual.diag(cm) / (np_actual.sum(cm,axis=1)+1e-8)
     f1 = 2 * precision * recall / (precision + recall + 1e-8)
 
     print("分类报告：")
@@ -37,17 +57,17 @@ def classification_report(y_pred,y_true,class_names=None):
     print("-" * 60)
     
     for i,class_name in enumerate(class_names):
-        support = np.sum(cm,axis=1)[i]
+        support = np_actual.sum(cm,axis=1)[i]
         print(f"{class_name:<12} {precision[i]:<8.3f} {recall[i]:<8.3f} {f1[i]:<8.3f} {support:<8}")
 
-    macro_avg_precision = np.mean(precision)
-    macro_avg_recall = np.mean(recall)
-    macro_avg_f1 = np.mean(f1)
-    weighted_avg_precision = np.average(precision, weighted=np.sum(cm,axis=1))
-    weighted_avg_recall = np.average(recall, weighted=np.sum(cm,axis=1))
-    weighted_avg_f1 = np.average(f1, weighted=np.sum(cm,axis=1))
-    total_support = np.sum(cm)
-    overall_accuracy = np.sum(np.diag(cm)) / total_support
+    macro_avg_precision = np_actual.mean(precision)
+    macro_avg_recall = np_actual.mean(recall)
+    macro_avg_f1 = np_actual.mean(f1)
+    weighted_avg_precision = np_actual.average(precision, weights=np_actual.sum(cm,axis=1))
+    weighted_avg_recall = np_actual.average(recall, weights=np_actual.sum(cm,axis=1))
+    weighted_avg_f1 = np_actual.average(f1, weights=np_actual.sum(cm,axis=1))
+    total_support = np_actual.sum(cm)
+    overall_accuracy = np_actual.sum(np_actual.diag(cm)) / total_support
 
     print("-" * 60)
     print(f"{'宏平均':<12} {macro_avg_precision:<8.3f} {macro_avg_recall:<8.3f} {macro_avg_f1:<8.3f} {total_support:<8}")

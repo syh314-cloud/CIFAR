@@ -190,6 +190,12 @@ class RegularizationCombinationExperiment:
                 grad_output = loss_fn.backward()
                 model.backward(grad_output)
                 
+                # 添加L2正则化梯度
+                if lambda_l2 > 0:
+                    for layer in model.layers:
+                        if hasattr(layer, 'w'):
+                            layer.dw += lambda_l2 * layer.w
+                
                 optimizer.step(model)
             
             # 验证准确率

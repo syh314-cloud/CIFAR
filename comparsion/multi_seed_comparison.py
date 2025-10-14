@@ -67,10 +67,9 @@ class MultiSeedExperiment:
         else:
             return data
     
-    def _apply_augmentation(self, x, seed):
+    def _apply_augmentation(self, x):
         """应用Crop + Flip数据增强"""
         x = x.reshape(-1, 3, 32, 32)
-        np.random.seed(seed)
         x = random_flip(x.copy(), prob=0.5)
         x = random_crop(x.copy(), crop_size=32, padding=4)
         return x.reshape(x.shape[0], -1)
@@ -111,7 +110,7 @@ class MultiSeedExperiment:
                 
                 # 应用数据增强
                 if self.use_augmentation:
-                    x = self._apply_augmentation(x, seed + epoch * 1000 + i)
+                    x = self._apply_augmentation(x)
                 
                 model.zero_grad()
                 y_pred = model.forward(x, training=False)
